@@ -88,14 +88,12 @@ class Shopware_Components_TemplateMail
     }
 
     /**
-     * @throws \Exception
-     *
      * @return \Shopware_Components_Translation
      */
     public function getTranslationReader()
     {
         if (null === $this->translationReader) {
-            $this->translationReader = Shopware()->Container()->get('translation');
+            $this->translationReader = new Shopware_Components_Translation();
         }
 
         return $this->translationReader;
@@ -152,7 +150,7 @@ class Shopware_Components_TemplateMail
         if (!($mailModel instanceof \Shopware\Models\Mail\Mail)) {
             $modelName = $mailModel;
             /* @var $mailModel \Shopware\Models\Mail\Mail */
-            $mailModel = $this->getModelManager()->getRepository(\Shopware\Models\Mail\Mail::class)->findOneBy(
+            $mailModel = $this->getModelManager()->getRepository('Shopware\Models\Mail\Mail')->findOneBy(
                 ['name' => $modelName]
             );
             if (!$mailModel) {
@@ -167,9 +165,7 @@ class Shopware_Components_TemplateMail
             $defaultContext = [
                 'sConfig' => $config,
                 'sShop' => $config->get('shopName'),
-                'sShopURL' => $this->getShop()->getAlwaysSecure() ?
-                    'https://' . $this->getShop()->getSecureHost() . $this->getShop()->getSecureBasePath() :
-                    'http://' . $this->getShop()->getHost() . $this->getShop()->getBasePath(),
+                'sShopURL' => ($this->getShop()->getSecure() ? 'https://' : 'http://') . $this->getShop()->getHost() . $this->getShop()->getBasePath(),
             ];
             $isoCode = $this->getShop()->get('isocode');
             $translationReader = $this->getTranslationReader();
@@ -182,8 +178,7 @@ class Shopware_Components_TemplateMail
         }
 
         // save current context to mail model
-        $mailContext = json_encode($context);
-        $mailContext = json_decode($mailContext, true);
+        $mailContext = json_decode(json_encode($context), true);
         $mailModel->setContext($mailContext);
         $this->getModelManager()->flush($mailModel);
 
@@ -242,7 +237,7 @@ class Shopware_Components_TemplateMail
         /** @var $attachment \Shopware\Models\Mail\Attachment */
         foreach ($mailModel->getAttachments() as $attachment) {
             if ($attachment->getShopId() !== null
-                && ($this->getShop() === null || $attachment->getShopId() != $this->getShop()->getId())) {
+                && ($this->getShop() === null || $attachment->getShopId() !== $this->getShop()->getId())) {
                 continue;
             }
 
